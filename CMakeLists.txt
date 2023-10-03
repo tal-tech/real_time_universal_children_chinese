@@ -1,0 +1,50 @@
+cmake_minimum_required(VERSION 3.4.1)
+
+project(kaldi-decode)
+
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall -ldl -fPIC -Wno-sign-compare -Wno-unused-local-typedefs -Wno-deprecated-declarations -Winit-self -DHAVE_EXECINFO_H=1 -DHAVE_CXXABI_H -DHAVE_ATLAS -msse -msse2 -rdynamic")
+
+add_definitions(-DELPP_THREAD_SAFE)
+add_definitions(-DELPP_NO_DEFAULT_LOG_FILE)
+
+if(DEFINED DELAY_TEST AND DELAY_TEST STREQUAL "1")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DDELAY_TEST")
+endif()
+
+if(DEFINED PROFILE AND PROFILE STREQUAL "1")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DPROFILE")
+endif()
+
+include_directories(.)
+include_directories(./include)
+include_directories(tlv/kaldi)
+include_directories(tlv/kaldiext)
+include_directories(sphlib)
+include_directories(struct)
+include_directories(toollib)
+include_directories(third)
+include_directories(third/openfst/include)
+include_directories(third/ATLAS_headers/include)
+include_directories(third/boost)
+include_directories(third/webrtc)
+include_directories(third/rapidjson)
+include_directories(third/staticjson)
+include_directories(third/staticjson/include)
+include_directories(third/easylogging)
+include_directories(vadec/include)
+
+add_subdirectory(third/json)
+add_subdirectory(third/nosqlite)
+add_subdirectory(third/boost)
+add_subdirectory(third/webrtc)
+add_subdirectory(third/staticjson)
+add_subdirectory(third/easylogging)
+
+add_subdirectory(lm_extend)
+add_subdirectory(tlv)
+add_subdirectory(vadec)
+add_subdirectory(test/tool)
+add_subdirectory(demo)
+

@@ -1,0 +1,114 @@
+cur_dir=${shell pwd}
+CC=gcc
+CXX=g++
+
+######## source section  ##########
+src_dir=tlv/struct tlv/sphlib tlv/toollib tlv/kaldi tlv/kaldiext third/json third/nosqlite
+test_dir=
+
+src_c=$(shell find $(src_dir) -name "*.c")
+c_objs=$(patsubst %.c,%.o,$(src_c))
+
+src_cc=$(shell find $(src_dir) -name "*.cc")
+cc_objs=$(patsubst %.cc,%.o,$(src_cc))
+
+lib_objs=$(c_objs) $(cc_objs)
+objs=$(lib_objs) $(test_c_objs) $(test_cpp_objs)
+
+ifdef dist
+    lib=lib/${prelib}vite.a
+	dll_name=lib/libkldasr.so
+else
+    lib=lib/${prelib}vite_g.a
+	dll_name=lib/libkldasr_g.so
+endif
+
+#############  test section  ################
+test=./a.out
+test_src=test/test.c
+
+############  tools  ###############
+tool_dir=test/tool
+tool_c=${shell find $(tool_dir) -name "*.cc"}
+tool_e=${patsubst %.cc,%,$(tool_c)}
+
+############  compile section  #############
+INC =-I . -I third -I include -I include/struct -I tlv/kaldi
+
+ifdef dist
+OF=-O3 -fPIC
+WFLAGS=-Wall
+else
+OF=-g -Wno-unused-but-set-variable -fPIC
+WFLAGS= -Wall
+endif
+
+ifdef USE_NNET1
+	OF+= -DUSE_NNET1
+endif
+
+CFLAGS=$(OF) $(INC) -DDNN_CONF
+LFLAGS=$(libs) -lm -lpthread -ldl
+
+# add iconv link
+CFLAGS +=-D NOT_USE_ICONV
+
+#c++
+OPENFSTINC = third/openfst/include
+OPENFSTLIBS = third/openfst/lib/libfst.so
+OPENFSTLDFLAGS = -Wl,-rpath=third/openfst/lib 
+ATLASINC = third/ATLAS_headers/include
+ATLASLIBS = /usr/lib/libatlas.so.3 /usr/lib/libf77blas.so.3 /usr/lib/libcblas.so.3 /usr/lib/liblapack_atlas.so.3
+
+#ifndef DOUBLE_PRECISION
+#$(error DOUBLE_PRECISION not defined.)
+#endif
+#ifndef OPENFSTINC
+#$(error OPENFSTINC not defined.)
+#endif
+#ifndef OPENFSTLIBS
+#$(error OPENFSTLIBS not defined.)
+#endif
+
+CXXFLAGS = -std=c++11 -I. -Itlv/kaldi -I$(OPENFSTINC) \
+		   -Wall -Wno-sign-compare -Wno-unused-local-typedefs \
+		   -Wno-deprecated-declarations -Winit-self \
+		   -DHAVE_EXECINFO_H=1 -DHAVE_CXXABI_H -DHAVE_ATLAS -I$(ATLASINC) \
+		   -msse -msse2 -pthread \
+		   ${OF} # -O0 -DKALDI_PARANOID
+
+LDFLAGS = $(EXTRA_LDFLAGS) $(OPENFSTLDFLAGS) $(ATLASLDFLAGS) -rdynamic
+LDLIBS =  $(EXTRA_LDLIBS) $(OPENFSTLIBS) $(ATLASLIBS)  -lm -lpthread -ldl
+
+
+%.o:%.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+%.o:%.cc
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+all: ${libgoto} ${lib} $(test) dll tools
+lib: ${lib_objs}
+	ar -rv ${lib}  ${lib_objs}
+
+.PHONY:tools dll
+
+dll:${lib_objs}
+	rm -rf ${dll_name}
+	${CXX} -shared ${EXTRA_LDLIBS} ${OPENFSTLIBS} ${ATLASLIBS}  ${lib_objs} -o ${dll_name}
+
+${lib}:${lib_objs}
+	ar -rv $(lib) $(lib_objs)
+	
+$(test):$(test_src) $(lib_objs)
+	$(CXX) $(CFLAGS) -o $(test) $(test_src) $(lib_objs) $(LDLIBS) $(LDFLAGS)
+
+tools:${lib}
+	for i in ${tool_e}; \
+		do echo $${i}; \
+		if [ ! -d tool ]; then mkdir tool; fi; \
+		${CXX} ${CXXFLAGS} ${WFLAGS} -c -o $${i}.o $${i}.cc; \
+		${CXX} ${CXXFLAGS} ${WFLAGS} -o tool/`basename $${i}` $${i}.o ${test_objs} ${dll_name} ${LDLIBS} ${LDFLAGS}; \
+	done;
+
+clean:
+	-rm -f $(objs) ${lib} ${tool_e}

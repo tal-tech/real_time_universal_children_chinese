@@ -1,0 +1,15 @@
+model:Chinese_Child/real-time_child_general_v1
+yewu:中文儿童通用， 学而思口算，网校AI私教，网校幼教直播课
+vad : 否
+service: 实时服务
+
+测试集性能：
+grey_test(9times)         17.7h char acc=85.87%
+vad_xiaohou_yuwen_xueqian 16h char acc=76.32%
+wx_chendu_gushi           5h char acc=95.35%
+wx_xrs_kousuan            11.25h  acc=95.55%
+wx_AI_sijiao              5.96    acc=81.70%
+peiyou_multi_class        9.6h    acc=83.07%
+wx_danmu_like             2.35h   acc=84.61%
+wx_danmu_wenke            2.36h   acc=85.94%
+
